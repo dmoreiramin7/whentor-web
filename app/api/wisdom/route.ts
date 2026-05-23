@@ -3,17 +3,22 @@ import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getWorldById } from '@/lib/worlds';
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
-const CRON_SECRET = process.env.CRON_SECRET ?? '';
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY ?? '';
-
 // Called by a daily cron job (Vercel Cron or external)
 export async function POST(req: NextRequest) {
+  const CRON_SECRET = process.env.CRON_SECRET ?? '';
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY ?? '';
+
   // Verify cron secret
   const auth = req.headers.get('authorization');
   if (auth !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json({ error: 'Resend not configured' }, { status: 503 });
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const serviceClient = await createServiceClient();
 
